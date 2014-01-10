@@ -1,0 +1,38 @@
+
+CHANGELOG
+
+* 2014/10/01:
+
+    - Revised for latest Python version.
+
+* 2013/09/26:
+
+    - Hexchat 2.9.6 is released. Bumped version and updated README.
+
+* 2013/08/02:
+
+    - Default speed to 2500.
+
+    - Accept UTF-8 encoding with an optional BOM signature.
+
+    - Show explicit errors while decoding.
+
+    - Show an explicit error message on any unhandled Python exception.
+      HexChat tends to just eat them without any message or traceback.
+
+* 2013/07/27:
+
+    - Print both the active network and channel on information messages.
+
+* 2013/06/24:
+
+    - Allow concurrent pastes in different contexts.
+
+    - Port to Python 3 and HexChat. XChat no longer supported.
+
+    - Remove '/hexpaste pause' in favor of using 'stop' to also pause
+      when there are pending lines.
+
+    - Replace empty lines with a single space to maintain
+      separation between lines.
+
