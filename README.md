@@ -1,5 +1,5 @@
 
-### About
+## About
 
 HexPaste is a Python 3 plugin for [HexChat][] that pastes files line by line
 on IRC, with a specific delay between lines. I wrote it for a channel where
@@ -8,7 +8,7 @@ it's customary to paste poetry. It's similar to the [mIRC][] /play command.
 [HexChat]: http://hexchat.github.io
 [mIRC]: http://www.mirc.com
 
-### Installation and usage
+## Installation and usage
 
 To install, just put the script in the HexChat addons folder. You'll need
 HexChat 2.9.6+ with the Python 3 plugin. After installing you should see
@@ -41,7 +41,7 @@ will auto-stop pasting lines. This makes it possible to continue pasting after
 a network problem by joining the channel again and typing the command:
 `/hexpaste resume`.
 
-### Portability and notes
+## Portability and notes
 
 All input/output is done using UTF-8. HexPaste accepts input files with a BOM
 signature (e.g. those created with the Windows notepad).
@@ -58,13 +58,13 @@ another channel/query.
 HexPaste is tested on Windows 7 and 8 and on Debian (both x86 and x86-64)
 using Python 3.3+ and HexChat 2.9.6+. Python 2.x is not supported.
 
-### Status
+## Status
 
 This program is feature-complete and has no known bugs. Unless new issues
 are reported or requests are made I plan no further development on it other
 than maintenance.
 
-### License
+## License
 
 Like all my hobby projects, this is Free Software. See the [Documentation][]
 folder for more information. No warranty though.
