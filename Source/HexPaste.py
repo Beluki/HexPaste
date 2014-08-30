@@ -7,12 +7,13 @@ An HexChat plugin that pastes files line by line on IRC.
 
 
 __module_name__ = 'HexPaste'
-__module_version__ = '2014.01.10'
+__module_version__ = '2014.08.30'
 __module_description__ = 'Paste files line by line on IRC.'
 
 
+import collections
+import hexchat
 import traceback
-import xchat
 
 
 # Error handling:
@@ -33,8 +34,8 @@ def file_lines(filepath):
         with open(filepath, encoding = 'utf-8-sig') as descriptor:
             return descriptor.readlines()
 
-    except (OSError, UnicodeError) as err:
-        raise HexPasteError('HexPaste: unable to read: %s - %s.' % (filepath, str(err)))
+    except (OSError, UnicodeDecodeError) as err:
+        raise HexPasteError('HexPaste: unable to read: {} - {}.'.format(filepath, err))
 
 
 def parse_speed(string):
@@ -51,7 +52,7 @@ def parse_speed(string):
         return speed
 
     except ValueError:
-        raise HexPasteError('HexPaste: invalid speed: %s.' % string)
+        raise HexPasteError('HexPaste: invalid speed: {}.'.format(string))
 
 
 def paste_line(context, line):
@@ -59,8 +60,12 @@ def paste_line(context, line):
     Say 'line' in a given HexChat 'context'.
     Empty lines are converted to a single space.
     """
-    line = line.rstrip() or ' '
-    context.command('say %s' % line)
+    line = line.rstrip()
+
+    if len(line) == 0:
+        line = ' '
+
+    context.command('say {}'.format(line))
 
 
 # Data representation:
@@ -69,18 +74,17 @@ class MessageContext(object):
     """
     Represents a context (network/server/channel) where messages can be pasted.
 
-    Since xchat.get_context() returns an unhashable object, this class
+    Since hexchat.get_context() returns an unhashable object, this class
     serves the same purpose. Like the former, MessageContext() returns
     a representation of the current active context.
 
     Two instances of 'MessageContext' are considered equal when the network
     server and channel are equal.
     """
-
     def __init__(self):
-        self.network = xchat.get_info('network')
-        self.server = xchat.get_info('server')
-        self.channel = xchat.get_info('channel')
+        self.network = hexchat.get_info('network')
+        self.server = hexchat.get_info('server')
+        self.channel = hexchat.get_info('channel')
 
     def __eq__(self, other):
         return ((self.network == other.network)
@@ -91,7 +95,7 @@ class MessageContext(object):
         return hash((self.network, self.server, self.channel))
 
     def __str__(self):
-        return '%s - %s' % (self.channel, self.network)
+        return '{} - {}'.format(self.channel, self.network)
 
 
 class Message(object):
@@ -115,83 +119,75 @@ class Message(object):
         self.hook = None
         self.state = 'stop'
 
-
     @property
     def remaining_lines(self):
         """ Total lines pending to paste. """
         return self.total_lines - self.line_number
 
-
     def paste(self):
         """ Start pasting lines in this message context. """
+        if self.state != 'stop':
+            raise HexPasteError('HexPaste: already pasting to: {}.'.format(self.context))
 
-        if not self.state == 'stop':
-            raise HexPasteError('HexPaste: already pasting to: %s.' % self.context)
-
-        self.hook = xchat.hook_timer(self.speed, self.tick)
+        self.hook = hexchat.hook_timer(self.speed, self.tick)
         self.state = 'paste'
-
 
     def stop(self):
         """ Stop pasting lines in this message context. """
+        if self.state != 'paste':
+            raise HexPasteError('HexPaste: not pasting to: {}.'.format(self.context))
 
-        if not self.state == 'paste':
-            raise HexPasteError('HexPaste: not pasting to: %s.' % self.context)
-
-        xchat.unhook(self.hook)
+        hexchat.unhook(self.hook)
         self.hook = None
         self.state = 'stop'
 
-
     def resume(self):
         """ Resume pasting lines in this message context. """
+        if self.state != 'stop':
+            raise HexPasteError('HexPaste: no pending lines to: {}.'.format(self.context))
 
-        if not self.state == 'stop':
-            raise HexPasteError('HexPaste: no pending lines to: %s.' % self.context)
-
-        self.hook = xchat.hook_timer(self.speed, self.tick)
+        self.hook = hexchat.hook_timer(self.speed, self.tick)
         self.state = 'paste'
-
 
     def maybe_stop(self):
         """ Like 'Message.stop()' but does not raise errors when not pasting. """
-
         if self.state == 'paste':
             self.stop()
-
 
     def tick(self, userdata):
         """
         Continue pasting while active and pending lines.
-        Auto-pauses when the context is unreachable.
+        Auto-stops when the context is unreachable.
         """
-        xchat_context = xchat.find_context(self.context.server, self.context.channel)
+        context = hexchat.find_context(self.context.server, self.context.channel)
 
         # no context, auto-pause:
-        if xchat_context is None:
-            xchat.prnt('HexPaste: stopping, target unreachable: %s.' % self.context)
+        if context is None:
+            hexchat.prnt('HexPaste: stopping, target unreachable: {}.'.format(self.context))
             self.stop()
             return 0
 
-        # no lines, notice parent and stop:
+        # no lines, notice parent and stop the timer:
         if self.remaining_lines == 0:
             self.parent.remove_target(self.context)
             return 0
 
         line = self.lines[self.line_number]
-        paste_line(xchat_context, line)
+        paste_line(context, line)
         self.line_number += 1
         return 1
 
 
 class HexPaste(object):
-
+    """
+    Mantains the collection of Messages that are currently active
+    and provides commands for the current context.
+    """
     def __init__(self):
 
         # all the active targets, where the key is a MessageContext
         # and the value the Message being pasted in that context:
         self.targets = {}
-
 
     def remove_target(self, context):
         """ Messages call this to notice us when they are done pasting. """
@@ -200,8 +196,7 @@ class HexPaste(object):
             raise HexPasteError('HexPaste: internal error, removing unknown context?!')
 
         del self.targets[context]
-        xchat.prnt('HexPaste: no more lines, finished pasting to: %s.' % context)
-
+        hexchat.prnt('HexPaste: no more lines, finished pasting to: {}.'.format(context))
 
     def paste(self, lines, speed):
         """ Start pasting lines to the current context. """
@@ -211,112 +206,136 @@ class HexPaste(object):
         if context in self.targets:
             old_message = self.targets[context]
             old_message.maybe_stop()
-            xchat.prnt('HexPaste: replacing current message to: %s.' % context)
+            hexchat.prnt('HexPaste: replacing message to: {}.'.format(context))
 
         message = Message(self, context, lines, speed)
         self.targets[context] = message
         message.paste()
 
-        xchat.prnt('HexPaste: pasting (%s lines) to: %s.'
-            % (message.remaining_lines, context))
-
+        hexchat.prnt('HexPaste: pasting ({} lines) to: {}.'
+            .format(message.remaining_lines, context))
 
     def stop(self):
         """ Stop pasting lines to the current context. """
         context = MessageContext()
 
         if not context in self.targets:
-            raise HexPasteError('HexPaste: not pasting to: %s.' % context)
+            raise HexPasteError('HexPaste: not pasting to: {}.'.format(context))
 
         message = self.targets[context]
         message.stop()
 
-        xchat.prnt('HexPaste: stopped pasting (%s pending lines) to: %s.'
-            % (message.remaining_lines, context))
-
+        hexchat.prnt('HexPaste: stopped pasting ({} pending lines) to: {}.'
+            .format(message.remaining_lines, context))
 
     def resume(self):
         """ Resume pasting lines to the current target. """
         context = MessageContext()
 
         if not context in self.targets:
-            raise HexPasteError('HexPaste: not pasting to: %s.' % context)
+            raise HexPasteError('HexPaste: not pasting to: {}.'.format(context))
 
         message = self.targets[context]
         message.resume()
 
-        xchat.prnt('HexPaste: resumed pasting (%s pending lines) to: %s.'
-            % (message.remaining_lines, context))
+        hexchat.prnt('HexPaste: resumed pasting ({} pending lines) to: {}.'
+            .format(message.remaining_lines, context))
 
 
-# Action callbacks:
+# Commands:
 
-paster = HexPaste()
-
-def hexpaste_paste_cb(word, word_eol, userdata):
-    """ Paste a file in the current server/channel. """
-
+def hexpaste_file_cb(word, word_eol, userdata):
+    """
+    /hexpaste file path/to/file [speed]
+      * Paste the lines of that file in the current active channel/query.
+        The default speed is 2500 milliseconds.
+    """
     if len(word) < 3:
         raise HexPasteError('HexPaste: no filename.')
 
     filepath = word[2]
-    speed = 2500
 
     if len(word) == 4:
         speed = parse_speed(word[3])
+    else:
+        speed = 2500
 
     lines = file_lines(filepath)
     paster.paste(lines, speed)
 
 
 def hexpaste_stop_cb(word, word_eol, userdata):
-    """ Stop pasting in the current server/channel. """
+    """
+    /hexpaste stop
+      * Stop pasting to the current active channel/query.
+        After stopping, '/hexpaste resume' will continue
+        pasting the pending lines.
+    """
     paster.stop()
 
 
 def hexpaste_resume_cb(word, word_eol, userdata):
-    """ Resume pasting in the current server/channel. """
+    """
+    /hexpaste resume
+      * Continue pasting lines to the current active channel/query.
+    """
     paster.resume()
 
 
-hexpaste_actions = {
-    'paste'  : hexpaste_paste_cb,
-    'stop'   : hexpaste_stop_cb,
-    'resume' : hexpaste_resume_cb,
-}
+def hexpaste_help_cb(word, word_eol, userdata):
+    """
+    /hexpaste help
+      * Prints all the available commands.
+    """
+    hexchat.prnt('HexPaste: available commands:')
+
+    for command in hexpaste_commands.values():
+        hexchat.prnt(command.__doc__.rstrip())
+
+
+# Globals:
+
+paster = HexPaste()
+
+hexpaste_commands = collections.OrderedDict()
+hexpaste_commands['file'] = hexpaste_file_cb
+hexpaste_commands['stop'] = hexpaste_stop_cb
+hexpaste_commands['resume'] = hexpaste_resume_cb
+hexpaste_commands['help'] = hexpaste_help_cb
 
 
 # Main callback:
 
 def hexpaste_cb(word, word_eol, userdata):
-    """ Parse parameters and dispatch to particular actions. """
-
+    """ Parse parameters and dispatch to particular commands. """
     try:
         if len(word) < 2:
-            raise HexPasteError('HexPaste: no parameters.')
+            raise HexPasteError(
+                'HexPaste: no parameters. See "/hexpaste help" for documentation.')
 
-        action = word[1]
-        if not action in hexpaste_actions:
-            raise HexPasteError('HexPaste: unknown action: %s.' % action)
+        command = word[1]
+        if not command in hexpaste_commands:
+            raise HexPasteError(
+                'HexPaste: unknown command. See "/hexpaste help" for documentation.')
 
-        hexpaste_actions[action](word, word_eol, userdata)
+        hexpaste_commands[command](word, word_eol, userdata)
 
     except HexPasteError as err:
-        xchat.prnt(str(err))
+        hexchat.prnt(str(err))
 
     # HexChat tends to eat exceptions without any message or traceback,
     # force printing for any unknown error:
     except Exception:
-        xchat.prnt(traceback.format_exc())
+        hexchat.prnt(traceback.format_exc())
 
     finally:
-        return xchat.EAT_ALL
+        return hexchat.EAT_ALL
 
 
-xchat.hook_command('hexpaste', hexpaste_cb)
+hexchat.hook_command('hexpaste', hexpaste_cb)
 
 
 # Done:
 
-xchat.prnt('%s %s loaded.' % (__module_name__, __module_version__))
+hexchat.prnt('{} {} loaded.'.format(__module_name__, __module_version__))
 

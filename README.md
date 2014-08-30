@@ -16,16 +16,18 @@ the following messages on startup:
 
 ```bash
 Python interface loaded.
-HexPaste 2014.01.10 loaded.
+HexPaste 2014.08.30 loaded.
 ```
 
 The usage is simple:
 
-* `/hexpaste paste path/to/file [speed]` will paste the lines of that file
+* `/hexpaste file path/to/file [speed]` will paste the lines of that file
   in the current active channel/query. The default speed is 2500 milliseconds.
 
 * `/hexpaste stop` will stop pasting to the current active channel/query. After
   stopping, you can resume pasting with `/hexpaste resume`.
+
+* `/hexpaste help` will show all the available parameters and a description.
 
 That's it. Commands always refer to the current active window. HexPaste supports
 concurrent pastes to different channels/queries (even at different speeds).
@@ -54,6 +56,9 @@ with an "Excess Flood" quit message.
 Information and error messages are written to the current active window, regardless
 of the paste channel. Rationale: notice which pastes complete, even when talking in
 another channel/query.
+
+Files are read entirely before pasting. Rationale: make sure pasting won't be
+interrupted with decoding or IO errors.
 
 HexPaste is tested on Windows 7 and 8 and on Debian (both x86 and x86-64)
 using Python 3.3+ and HexChat 2.9.6+. Python 2.x is not supported.

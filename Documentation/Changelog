@@ -1,6 +1,18 @@
 
 CHANGELOG
 
+* 2014/08/30:
+
+    - XChat is no longer supported, only HexChat is.
+
+    - '/hexpaste paste ...' is now '/hexpaste file ...'.
+      Rationale: if I ever implement pasting from the clipboard
+      it will be named '/hexpaste clip ...'. Both are a paste operation
+      so let's keep the names coherent.
+
+    - '/hexpaste help' has been added. '/hexpaste' without parameters
+      or with invalid parameters hint at the help.
+
 * 2014/07/21:
 
     - Revised. Working on Python 3.4.1 and HexChat 2.10.0.
