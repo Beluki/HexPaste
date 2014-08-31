@@ -15,8 +15,8 @@ HexChat 2.9.6+ with the Python 3 plugin. After installing you should see
 the following messages on startup:
 
 ```bash
-Python interface loaded.
-HexPaste 2014.08.30 loaded.
+Python interface loaded
+HexPaste 2014.08.31 loaded
 ```
 
 The usage is simple:
