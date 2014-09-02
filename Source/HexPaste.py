@@ -7,7 +7,7 @@ An HexChat plugin that pastes files line by line on IRC.
 
 
 __module_name__ = 'HexPaste'
-__module_version__ = '2014.08.31'
+__module_version__ = '2014.09.02'
 __module_description__ = 'Paste files line by line on IRC.'
 
 

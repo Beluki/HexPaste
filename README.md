@@ -16,7 +16,7 @@ the following messages on startup:
 
 ```bash
 Python interface loaded
-HexPaste 2014.08.31 loaded
+HexPaste 2014.09.02 loaded
 ```
 
 The usage is simple:
@@ -65,9 +65,10 @@ using Python 3.3+ and HexChat 2.9.6+. Python 2.x is not supported.
 
 ## Status
 
-This program is feature-complete and has no known bugs. Unless new issues
-are reported or requests are made I plan no further development on it other
-than maintenance.
+This program is finished!
+
+HexPaste is feature-complete and has no known bugs. Unless issues are reported
+I plan no further development on it other than maintenance.
 
 ## License
 
