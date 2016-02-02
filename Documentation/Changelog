@@ -1,6 +1,10 @@
 
 CHANGELOG
 
+* 2016/02/02:
+
+    - Working with latest HexChat beta (2.11) and Python 3.5.
+
 * 2014/08/31:
 
     - The unique server id is now also used as an identifier for messages.

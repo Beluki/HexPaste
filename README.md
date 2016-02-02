@@ -16,7 +16,7 @@ the following messages on startup:
 
 ```bash
 Python interface loaded
-HexPaste 2014.09.02 loaded
+HexPaste 2016.02.02 loaded
 ```
 
 The usage is simple:
@@ -75,5 +75,5 @@ I plan no further development on it other than maintenance.
 Like all my hobby projects, this is Free Software. See the [Documentation][]
 folder for more information. No warranty though.
 
-[Documentation]: https://github.com/Beluki/HexPaste/tree/master/Documentation
+[Documentation]: Documentation
 
